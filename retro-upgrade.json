@@ -1,0 +1,90 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "mspOfferName": {
+      "type": "string",
+      "defaultValue": "MachinesLikeMe CI — Menzel POC",
+      "metadata": {
+        "description": "Shown to the customer in Service providers. Must be unique per customer subscription."
+      }
+    },
+    "mspOfferDescription": {
+      "type": "string",
+      "defaultValue": "Grants Machines Like Me's deployment identity the access needed to provision and operate the application in this subscription."
+    },
+    "managedByTenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "The Machines Like Me (managing) tenant id."
+      },
+      "defaultValue": "29d6890b-18f0-43c0-9d40-547b4d59e95a"
+    },
+    "deploymentSpObjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "Object id of the ci-<key> service principal in the managing tenant."
+      },
+      "defaultValue": "29886456-85dc-4757-9d52-ac067bc48ed0"
+    }
+  },
+  "variables": {
+    "mspRegistrationName": "[guid(parameters('mspOfferName'))]",
+    "mspAssignmentName": "[guid(parameters('mspOfferName'))]",
+    "contributor": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+    "userAccessAdministrator": "18d7d88d-d35e-4fb5-a5c3-7773c20a72d9",
+    "registrationAssignmentDeleteRole": "91c1777a-f3dc-4fae-b103-61d183457e46",
+    "sandboxGroupDataOwner": "c24cf47c-5077-412d-a19c-45202126392c",
+    "acrPull": "7f951dda-4ed3-4680-a7ca-43fe172d538d",
+    "keyVaultSecretsUser": "4633458b-17de-408a-b874-0445c86b69e6",
+    "storageBlobDataContributor": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
+    "cognitiveServicesOpenAiUser": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ManagedServices/registrationDefinitions",
+      "apiVersion": "2022-10-01",
+      "name": "[variables('mspRegistrationName')]",
+      "properties": {
+        "registrationDefinitionName": "[parameters('mspOfferName')]",
+        "description": "[parameters('mspOfferDescription')]",
+        "managedByTenantId": "[parameters('managedByTenantId')]",
+        "authorizations": [
+          {
+            "principalId": "[parameters('deploymentSpObjectId')]",
+            "principalIdDisplayName": "MLM deployment identity - provisions and operates all resources",
+            "roleDefinitionId": "[variables('contributor')]"
+          },
+          {
+            "principalId": "[parameters('deploymentSpObjectId')]",
+            "principalIdDisplayName": "MLM deployment identity - may grant ONLY these roles, and ONLY to managed identities in this subscription",
+            "roleDefinitionId": "[variables('userAccessAdministrator')]",
+            "delegatedRoleDefinitionIds": [
+              "[variables('sandboxGroupDataOwner')]",
+              "[variables('acrPull')]",
+              "[variables('keyVaultSecretsUser')]",
+              "[variables('storageBlobDataContributor')]",
+              "[variables('cognitiveServicesOpenAiUser')]"
+            ]
+          },
+          {
+            "principalId": "[parameters('deploymentSpObjectId')]",
+            "principalIdDisplayName": "MLM deployment identity - may remove this delegation",
+            "roleDefinitionId": "[variables('registrationAssignmentDeleteRole')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.ManagedServices/registrationAssignments",
+      "apiVersion": "2022-10-01",
+      "name": "[variables('mspAssignmentName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedServices/registrationDefinitions', variables('mspRegistrationName'))]"
+      ],
+      "properties": {
+        "registrationDefinitionId": "[extensionResourceId(subscription().id, 'Microsoft.ManagedServices/registrationDefinitions', variables('mspRegistrationName'))]"
+      }
+    }
+  ]
+}
