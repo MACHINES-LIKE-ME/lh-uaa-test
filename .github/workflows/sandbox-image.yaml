@@ -29,10 +29,10 @@ jobs:
           echo "acting identity:"
           az account show --query "{type:user.type, user:user.name}" -o json
 
-          ARM="https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.App/sandboxGroups/$GROUP"
-          ENDPOINT=$(az rest --method GET --url "$ARM?api-version=2026-02-01-preview" \
-            --query "properties.managementEndpoint" -o tsv)
-          DP="$ENDPOINT/subscriptions/$SUB/resourceGroups/$RG/sandboxGroups/$GROUP"
+          # The management endpoint is regional and deterministic; reading it off
+          # ARM would need Microsoft.App/sandboxGroups/read, which the data-plane
+          # role does not grant (and CI must not hold management rights).
+          DP="https://management.${{ vars.LOCATION }}.azuredevcompute.io/subscriptions/$SUB/resourceGroups/$RG/sandboxGroups/$GROUP"
           TOKEN=$(az account get-access-token --resource "https://dynamicsessions.io" --query accessToken -o tsv)
 
           echo "== PUT /diskimages (the CI half of agent_hub)"
