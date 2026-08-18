@@ -1,0 +1,49 @@
+name: Register sandbox disk image (OIDC, no secrets)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Azure login via OIDC (federated credential on the customer-tenant UAMI)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Register the runner-base disk image on the sandbox group
+        env:
+          SUB: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          RG: ${{ vars.RESOURCE_GROUP }}
+          GROUP: ${{ vars.SANDBOX_GROUP_NAME }}
+        run: |
+          set -euo pipefail
+          echo "acting identity:"
+          az account show --query "{type:user.type, user:user.name}" -o json
+
+          ARM="https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.App/sandboxGroups/$GROUP"
+          ENDPOINT=$(az rest --method GET --url "$ARM?api-version=2026-02-01-preview" \
+            --query "properties.managementEndpoint" -o tsv)
+          DP="$ENDPOINT/subscriptions/$SUB/resourceGroups/$RG/sandboxGroups/$GROUP"
+          TOKEN=$(az account get-access-token --resource "https://dynamicsessions.io" --query accessToken -o tsv)
+
+          echo "== PUT /diskimages (the CI half of agent_hub)"
+          CODE=$(curl -sS -o /tmp/out -w '%{http_code}' -X PUT \
+            -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+            -d '{"image":{"base":"mcr.microsoft.com/cbl-mariner/base/core:2.0"},"labels":{"name":"runner-base"}}' \
+            "$DP/diskimages?api-version=2026-02-01-preview")
+          echo "http=$CODE"; cat /tmp/out; echo
+          [ "$CODE" = "200" ] || { echo "FAILED"; exit 1; }
+
+          echo "== LIST /diskimages"
+          curl -sS -H "Authorization: Bearer $TOKEN" "$DP/diskimages?api-version=2026-02-01-preview" | head -c 400
+          echo
+          echo "SECRETLESS_CI_OK"
