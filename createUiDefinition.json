@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "config": {
+      "isWizard": false,
+      "basics": {
+        "description": "Grants Machines Like Me's deployment identity the access needed to provision and operate the application in this subscription. Contributor, plus permission to assign a fixed list of data-plane roles to managed identities in this subscription only. Revocable at any time under Service providers.",
+        "location": {
+          "label": "Region",
+          "toolTip": "Only records where the delegation metadata is stored; the delegation itself covers the whole subscription.",
+          "resourceTypes": [],
+          "allowedValues": [
+            "swedencentral"
+          ],
+          "visible": true
+        }
+      }
+    },
+    "basics": [],
+    "steps": [],
+    "outputs": {},
+    "resourceTypes": []
+  }
+}
