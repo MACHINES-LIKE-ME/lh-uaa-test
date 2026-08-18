@@ -17,7 +17,8 @@
       "type": "string",
       "metadata": {
         "description": "The Machines Like Me (managing) tenant id."
-      }
+      },
+      "defaultValue": "29d6890b-18f0-43c0-9d40-547b4d59e95a"
     },
     "deploymentSpObjectId": {
       "type": "string",
